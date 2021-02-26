@@ -5,14 +5,13 @@ import subprocess
 import argparse
 import re
 import os
-import shutil
 import datetime
 import urllib.request
 import urllib.error
 import urllib.parse
 
-DRAFT_PATTERN = "(draft-[a-zA-Z0-9-]+-[0-9][0-9])(\.txt)?"
-FILENAME_PATTERN = "(draft-[a-zA-Z0-9-]+)\.txt$"
+DRAFT_PATTERN = r"(draft-[a-zA-Z0-9-]+-[0-9][0-9])(\.txt)?"
+FILENAME_PATTERN = r"(draft-[a-zA-Z0-9-]+)\.txt$"
 DOWNLOAD_TEMPLATE = "https://www.ietf.org/id/%s.txt"
 
 
@@ -52,12 +51,12 @@ def add_file(fname):
     # Reduce the file to the basic name
     draft_name = os.path.split(fname)[1]
     m = re.match(FILENAME_PATTERN, draft_name)
-    if m == None:
+    if m is None:
         die("Bogus filename: %s" % draft_name)
     f = m.group(1)
     base = f
     m = re.match("(.*)-[0-9][0-9]$", f)
-    if m != None:
+    if m is not None:
         base = m.group(1)
 
     branch = "branch-%s" % base
@@ -112,7 +111,7 @@ parser.add_argument("--new", dest="new", action="store_true")
 args = parser.parse_args()
 
 
-if args.draft != None:
+if args.draft is not None:
     m = re.match(DRAFT_PATTERN, args.draft)
     if m is None:
         die("Bogus draft name: %s" % args.draft)
@@ -120,5 +119,5 @@ if args.draft != None:
     debug("Saved draft in %s" % file)
     add_file(file)
 
-if args.file != None:
+if args.file is not None:
     add_file(args.file)

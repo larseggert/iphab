@@ -6,4 +6,5 @@ disable=
 	invalid-name,
 	missing-function-docstring,
 	missing-module-docstring,
-	too-many-branches
+	too-many-branches,
+	redefined-outer-name
