@@ -48,13 +48,13 @@ def die(msg):
 def read_db(dbname):
     try:
         fp = open(dbname)
-        json.load(fp)
+        return json.load(fp)
     except Exception:
         return {}
 
 
 def save_db(dbname, data):
-    fp = open(dbname, "wb")
+    fp = open(dbname, "w", encoding="utf8")
     json.dump(data, fp, indent=1)
 
 
@@ -135,7 +135,7 @@ def strip_file(infile, outfile):
 
 
 def get_revision(output):
-    ll = output.split("\n")
+    ll = output.decode().split("\n")
     for l in ll:
         debug(l)
         m = re.search(r"Revision URI:.*(D\d+)$", l)
@@ -448,7 +448,7 @@ def post_ballot(apikey, draft, position, discuss, comment):
     try:
         url = urllib.request.urlopen(req)
     except Exception as e:
-        die("Error posting ballot. %s" % str(e))
+        die("Error posting ballot: %s" % e)
     resp = url.read()
     debug(resp)
 
@@ -469,7 +469,7 @@ def download_review(docname, out):
     if out is None:
         of = sys.stdout
     else:
-        of = open("%s/%s-rev.txt" % (out, docname), "wb")
+        of = open("%s/%s-rev.txt" % (out, docname), "w", encoding="utf8")
     of.write("\n".join(output))
     of.write("\n")
 
@@ -513,8 +513,8 @@ def update_drafts():
     db = read_db(DBNAME)
     try:
         update_drafts_inner(man, db)
-    except Exception:
-        print("Error doing update")
+    except Exception as e:
+        print("Error doing update: %s" % e)
 
 
 def update_drafts_inner(man, db):
