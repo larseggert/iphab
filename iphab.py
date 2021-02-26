@@ -11,8 +11,8 @@ import urllib.request
 import urllib.error
 import urllib.parse
 
-DRAFT_PATTERN="(draft-[a-zA-Z0-9-\._\+]+)-([0-9][0-9])$"
-DRAFT_PATTERN_TXT="(draft-[a-zA-Z0-9-\._\+]+)-([0-9][0-9])\.txt$"
+DRAFT_PATTERN = "(draft-[a-zA-Z0-9-\._\+]+)-([0-9][0-9])$"
+DRAFT_PATTERN_TXT = "(draft-[a-zA-Z0-9-\._\+]+)-([0-9][0-9])\.txt$"
 DBNAME = "drafts.db"
 DRAFTS_SUBDIR = "ids"
 GIT_REPO = "ietf-review"
@@ -21,14 +21,17 @@ NEW = []
 DATATRACKER = "https://datatracker.ietf.org"
 RC = None
 
+
 def debug(msg):
     global args
     if args.verbose:
         print(msg)
 
+
 def warn(msg):
-    print("Warning: %s"%msg)
-    
+    print("Warning: %s" % msg)
+
+
 def die(msg):
     print(msg)
     sys.exit(1)
@@ -41,7 +44,7 @@ def die(msg):
 #   "draft-ietf-blah" : {"version" : "XX", "revision_id: "DXXX"} },
 #   "draft-ietf-mumble" : {"version" : "YY", "revision_id: "DYYY"} }
 # }
-# 
+#
 def read_db(dbname):
     try:
         fp = open(dbname)
@@ -49,15 +52,18 @@ def read_db(dbname):
         return {}
     return json.load(fp)
 
+
 def save_db(dbname, data):
     fp = open(dbname, "wb")
     json.dump(data, fp, indent=1)
 
 
-
 # Manage the drafts clone
 def sync_repo():
-    subprocess.check_call(["rsync", "-avz", "rsync.ietf.org::internet-drafts", DRAFTS_SUBDIR])
+    subprocess.check_call(
+        ["rsync", "-avz", "rsync.ietf.org::internet-drafts", DRAFTS_SUBDIR]
+    )
+
 
 def read_ids_from_directory():
     drafts = {}
@@ -73,12 +79,13 @@ def read_ids_from_directory():
         elif int(rev) > int(drafts[base]):
             drafts[base] = rev
     return drafts
-    
+
+
 def read_id_manifest():
     fp = open(DRAFTS_SUBDIR + "/all_id2.txt")
     drafts = {}
     for l in fp:
-        if l.startswith('#'):
+        if l.startswith("#"):
             continue
         dat = l.split("\t")
         if dat[2] != "Active":
@@ -86,15 +93,17 @@ def read_id_manifest():
         draft = dat[0]
         m = re.match(DRAFT_PATTERN, draft)
         if m is None:
-            die("Draft name doesn't match pattern: %s"%draft)
+            die("Draft name doesn't match pattern: %s" % draft)
         drafts[m.group(1)] = m.group(2)
     return drafts
+
 
 def is_newer_version(a, b):
     return int(a) > int(b)
 
+
 # Routines to upload drafts
-def run_sub(cmd, ignore_errors = False):
+def run_sub(cmd, ignore_errors=False):
     cwd = os.getcwd()
     os.chdir(GIT_REPO)
     try:
@@ -108,17 +117,22 @@ def run_sub(cmd, ignore_errors = False):
         raise e
     os.chdir(cwd)
     return output
-    
-def run_git(command, ignore_errors = False):
+
+
+def run_git(command, ignore_errors=False):
     cmd = command[:]
     cmd.insert(0, "git")
     return run_sub(cmd, ignore_errors)
 
+
 def strip_file(infile, outfile):
-    stripped = subprocess.check_output(["awk", "-f", sys.path[0] + "/strip.awk", infile])
+    stripped = subprocess.check_output(
+        ["awk", "-f", sys.path[0] + "/strip.awk", infile]
+    )
     o = open(outfile, "wb")
     o.write(stripped)
     o.close()
+
 
 def get_revision(output):
     ll = output.split("\n")
@@ -129,17 +143,19 @@ def get_revision(output):
             return m.group(1)
     raise RuntimeError("Couldn't parse arcanist output")
 
-    
+
 def upload_revision(draftname, version, revision_id):
-    debug("Uploading draft %s-%s, current revision=%s"%(draftname, version, revision_id))
+    debug(
+        "Uploading draft %s-%s, current revision=%s" % (draftname, version, revision_id)
+    )
     run_git(["checkout", "master"])
     run_git(["branch", "-D", GIT_UPLOAD_BRANCH], True)
     run_git(["checkout", "-b", GIT_UPLOAD_BRANCH])
-    dst = "%s/%s.txt"%(GIT_REPO, draftname)
-    strip_file("%s/%s-%s.txt"%(DRAFTS_SUBDIR, draftname, version), dst)
-    run_git(["add", "%s.txt"%draftname])
-    run_git(["commit", "-m", "%s-%s"%(draftname, version)])
-    args = ["arc","diff","--allow-untracked","master"]
+    dst = "%s/%s.txt" % (GIT_REPO, draftname)
+    strip_file("%s/%s-%s.txt" % (DRAFTS_SUBDIR, draftname, version), dst)
+    run_git(["add", "%s.txt" % draftname])
+    run_git(["commit", "-m", "%s-%s" % (draftname, version)])
+    args = ["arc", "diff", "--allow-untracked", "master"]
     if revision_id != None:
         args.append("--update")
         args.append(revision_id)
@@ -155,42 +171,49 @@ def upload_revision(draftname, version, revision_id):
 def run_call_conduit(command, js):
     cwd = os.getcwd()
     val = json.dumps(js)
-    debug("Running: %s"%val)
+    debug("Running: %s" % val)
     os.chdir(GIT_REPO)
-    p = subprocess.Popen(["arc", "call-conduit", command],
-                          stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    p = subprocess.Popen(
+        ["arc", "call-conduit", command],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
     (out, err) = p.communicate(json.dumps(js))
     os.chdir(cwd)
     if err != "":
         print(err)
-        raise RuntimeError("Error doing call-conduit: %s"%err)
+        raise RuntimeError("Error doing call-conduit: %s" % err)
     debug(out)
     jj = json.loads(out)
     if jj["error"] != None:
-        raise RuntimeError("Error doing call-conduit: %s"%err)
+        raise RuntimeError("Error doing call-conduit: %s" % err)
     return jj
 
+
 def lookup_user(reviewer):
-    j = run_call_conduit("user.query", {"usernames":[reviewer]})
+    j = run_call_conduit("user.query", {"usernames": [reviewer]})
     if len(j["response"]) == 0:
         return None
-    return j["response"][0]['phid']
+    return j["response"][0]["phid"]
+
 
 def add_reviewer(reviewer, revision, blocking):
     u = lookup_user(reviewer)
     if u == None:
-        die("Unknown user %s"%reviewer)
+        die("Unknown user %s" % reviewer)
     if blocking:
-        rev = "blocking(%s)"%u
+        rev = "blocking(%s)" % u
     else:
         rev = u
-    r = run_call_conduit("differential.revision.edit",
-                         {
-                             "transactions" :
-                             [{"type":"reviewers.add", "value":[rev]}],
-                             "objectIdentifier":revision
-                         }
-                         )
+    r = run_call_conduit(
+        "differential.revision.edit",
+        {
+            "transactions": [{"type": "reviewers.add", "value": [rev]}],
+            "objectIdentifier": revision,
+        },
+    )
+
 
 # Assign reviewers based on the IESG Agenda
 def download_agenda():
@@ -198,32 +221,35 @@ def download_agenda():
     js = u.read()
     return json.loads(js)
 
+
 def assign_reviewers_from_agenda(agenda, reviewers):
-    debug("Agenda: %s"%agenda)
+    debug("Agenda: %s" % agenda)
     db = read_db(DBNAME)
     for sn, sec in agenda["sections"].items():
         if "docs" in sec:
             for doc in sec["docs"]:
                 docname = doc["docname"]
                 if not docname.startswith("draft-"):
-                    warn("Invalid draft name %s"%docname)
+                    warn("Invalid draft name %s" % docname)
                     continue
                 blocking = False
                 if doc["intended-std-level"].find("Standard") > -1:
                     blocking = True
                 # Find the revision
                 if not docname in db:
-                    warn("No Differential revision found for %s"%docname)
+                    warn("No Differential revision found for %s" % docname)
                 revision = db[docname]["revision_id"]
-                debug("Adding reviewers for %s, revision=%s, blocking=%s"%(docname, revision, blocking))
+                debug(
+                    "Adding reviewers for %s, revision=%s, blocking=%s"
+                    % (docname, revision, blocking)
+                )
                 for rev in reviewers:
                     add_reviewer(rev, revision, blocking)
-                
+
 
 def update_agenda(reviewer):
     agenda = download_agenda()
     assign_reviewers_from_agenda(agenda, [reviewer])
-    
 
 
 # Ballot on a draft
@@ -231,26 +257,29 @@ def reflow(txt):
     reflowed = ["\n".join(textwrap.wrap(l)) for l in txt.split("\n")]
     return "\n".join(reflowed)
 
+
 def clean_diff(js):
     lines = js["response"].split("\n")
     if not lines[0].startswith("diff"):
         raise ValueError("Malformed")
     if not lines[1].startswith("new file"):
-        raise ValueError("Malformed")        
+        raise ValueError("Malformed")
     if not lines[2].startswith("---"):
-        raise ValueError("Malformed")        
+        raise ValueError("Malformed")
     if not lines[3].startswith("+++"):
         raise ValueError("Malformed")
-    
+
     return [">   " + l[1:] for l in lines[6:]]
+
 
 def find_section(diff, line):
     for x in range(line, 0, -1):
         m = re.match(">   (\d\S+)", diff[x])
         if m is not None:
-            return "S %s"%m.group(1)
+            return "S %s" % m.group(1)
     return ""
-                     
+
+
 def format_comment(diff, comment):
     important_re = re.compile(r"IMPORTANT:\s*(.*)", re.DOTALL)
     context = 6
@@ -267,20 +296,16 @@ def format_comment(diff, comment):
         if m is not None:
             raw = m.group(1)
             important = True
-            
+
         txt += "\n"
         txt += reflow(raw)
-    
-    comment = [
-        last_line,
-        important,
-        txt
-    ]
+
+    comment = [last_line, important, txt]
     return comment
 
 
 def format_comments(comments):
-    c2 = sorted(comments, key = lambda x: x[0])
+    c2 = sorted(comments, key=lambda x: x[0])
     l = ""
     first = True
     for c in c2:
@@ -291,8 +316,16 @@ def format_comments(comments):
 
     return l
 
+
 def format_overall(event):
-    return "\n".join([reflow(c["content"]["raw"]) for c in event["comments"] if c["content"]["raw"] != "Update"])
+    return "\n".join(
+        [
+            reflow(c["content"]["raw"])
+            for c in event["comments"]
+            if c["content"]["raw"] != "Update"
+        ]
+    )
+
 
 def retrieve_comments(docname, reviewer):
     # Get my PHID
@@ -301,10 +334,12 @@ def retrieve_comments(docname, reviewer):
     # Find the revision
     db = read_db(DBNAME)
     if not docname in db:
-        warn("No Differential revision found for %s"%docname)
+        warn("No Differential revision found for %s" % docname)
 
     # Now get all the events
-    j = run_call_conduit("transaction.search", {"objectIdentifier":db[docname]["revision_id"]})
+    j = run_call_conduit(
+        "transaction.search", {"objectIdentifier": db[docname]["revision_id"]}
+    )
     result = j["response"]["data"]
 
     last_diff = 0
@@ -315,15 +350,19 @@ def retrieve_comments(docname, reviewer):
             last_diff = event["fields"]["diff"]["id"]
 
     # Now get the diff
-    diff = run_call_conduit("differential.getrawdiff", {"diffID":last_diff})
+    diff = run_call_conduit("differential.getrawdiff", {"diffID": last_diff})
     diff = clean_diff(diff)
 
     # Now interpolate the comments into the diff.
     important = []
     comments = []
-    overall = "Rich version of this review at:\nhttps://mozphab-ietf.devsvcdev.mozaws.net/" + db[docname]["revision_id"] + "\n"
+    overall = (
+        "Rich version of this review at:\nhttps://mozphab-ietf.devsvcdev.mozaws.net/"
+        + db[docname]["revision_id"]
+        + "\n"
+    )
     status = None
-    
+
     for event in result:
         if event["type"] == "comment":
             if event["authorPHID"] != username:
@@ -334,72 +373,79 @@ def retrieve_comments(docname, reviewer):
             if status == None:
                 status = event["fields"]["new"]
                 overall += "\n" + format_overall(event)
-            
+
         if event["type"] != "inline":
             continue
 
         if event["authorPHID"] != username:
             continue
-        
+
         c = format_comment(diff, event)
         if c[1]:
             important.append(c)
         else:
             comments.append(c)
 
-    debug("Status = %s"%status)
-    
+    debug("Status = %s" % status)
+
     return status, overall, important, comments
-    
+
+
 def ballot_draft(docname):
-    status, overall, important, comments = retrieve_comments(docname,
-                                                             RC["reviewer"])
-    
+    status, overall, important, comments = retrieve_comments(docname, RC["reviewer"])
+
     output = []
 
     if status == "accepted":
         debug("Accepted, balloting no-objection")
         output.append(overall)
         if len(important) > 0:
-            output.append("IMPORTANT\n"+format_comments(important))
-        if len(comments) > 0 :
-            output.append("COMMENTS\n"+format_comments(comments))
+            output.append("IMPORTANT\n" + format_comments(important))
+        if len(comments) > 0:
+            output.append("COMMENTS\n" + format_comments(comments))
         post_ballot(RC["apikey"], docname, "noobj", None, "\n\n".join(output))
     elif status == "needs-revision":
         debug("needs-revision balloting DISCUSS")
-        output.append(overall)        
+        output.append(overall)
         if len(important) > 0:
-            output.append("DETAIL\n"+format_comments(important))
-        post_ballot(RC["apikey"], docname, "discuss", "\n\n".join(output), format_comments(comments))
+            output.append("DETAIL\n" + format_comments(important))
+        post_ballot(
+            RC["apikey"],
+            docname,
+            "discuss",
+            "\n\n".join(output),
+            format_comments(comments),
+        )
     else:
         die("No or unknown status recorded. Cannot ballot")
-    
+
+
 def post_ballot(apikey, draft, position, discuss, comment):
     api = "/api/iesg/position"
-    
+
     submit = {
-        "apikey" : RC["apikey"],
-        "doc" : draft,
-        "position" : position,
+        "apikey": RC["apikey"],
+        "doc": draft,
+        "position": position,
     }
     if discuss is not None:
-       submit["discuss"] = discuss
+        submit["discuss"] = discuss
     if comment is not None:
         submit["comment"] = comment
 
     u = DATATRACKER + api
-    debug("URL = %s"%u)
+    debug("URL = %s" % u)
     sub = urllib.parse.urlencode(submit)
-    debug("SUB = %s"%sub)
+    debug("SUB = %s" % sub)
     req = urllib.request.Request(u, sub)
     url = None
     try:
         url = urllib.request.urlopen(req)
     except Exception as e:
-        die("Error posting ballot. %s --> %s"%(str(e), e.read()))
+        die("Error posting ballot. %s --> %s" % (str(e), e.read()))
     resp = url.read()
     debug(resp)
-        
+
 
 def download_review(docname, out):
     status, overall, important, comments = retrieve_comments(docname, RC["reviewer"])
@@ -408,54 +454,53 @@ def download_review(docname, out):
 
     output.append(overall)
     if len(important) > 0:
-        output.append("IMPORTANT\n"+format_comments(important))
-    if len(comments) > 0 :
-        output.append("COMMENTS\n"+format_comments(comments))
+        output.append("IMPORTANT\n" + format_comments(important))
+    if len(comments) > 0:
+        output.append("COMMENTS\n" + format_comments(comments))
 
     if out is None:
         of = sys.stdout
     else:
-        of = open("%s/%s-rev.txt"%(out,docname), "wb")
+        of = open("%s/%s-rev.txt" % (out, docname), "wb")
     of.write("\n".join(output))
     of.write("\n")
+
 
 def find_revision(docname):
     db = read_db(DBNAME)
     if not docname in db:
-        die("No Differential revision found for %s"%docname)
+        die("No Differential revision found for %s" % docname)
     print(db[docname])
 
 
 def clear_requests(reviewer):
     u = lookup_user(reviewer)
     if u == None:
-        die("Unknown user %s"%reviewer)
-    debug("User %s -> PHID %s"%(reviewer, u))
+        die("Unknown user %s" % reviewer)
+    debug("User %s -> PHID %s" % (reviewer, u))
 
-    r = run_call_conduit("differential.revision.search",
-                         {
-                             "constraints": {"reviewerPHIDs" : [ u ] }
-                         }
-                         )
+    r = run_call_conduit(
+        "differential.revision.search", {"constraints": {"reviewerPHIDs": [u]}}
+    )
     debug(r)
 
     for rev in r["response"]["data"]:
         if rev["fields"]["status"]["value"] != "needs-review":
             continue
-        debug("Clearing request for %s"%rev["phid"])
-        r = run_call_conduit("differential.revision.edit",
-                             {
-                                 "transactions" :
-                                 [{"type":"reviewers.remove", "value":[u]}],
-                                 "objectIdentifier":rev["phid"]
-                             }
+        debug("Clearing request for %s" % rev["phid"])
+        r = run_call_conduit(
+            "differential.revision.edit",
+            {
+                "transactions": [{"type": "reviewers.remove", "value": [u]}],
+                "objectIdentifier": rev["phid"],
+            },
         )
 
-        
+
 # Master function
 def update_drafts():
     sync_repo()
-    #man = read_id_manifest()
+    # man = read_id_manifest()
     man = read_ids_from_directory()
     db = read_db(DBNAME)
     try:
@@ -463,25 +508,29 @@ def update_drafts():
     except:
         print("Error doing update")
 
-def update_drafts_inner(man, db):    
+
+def update_drafts_inner(man, db):
     for draft in man:
         version = man[draft]
-        debug("Draft %s-%s"%(draft, version))
+        debug("Draft %s-%s" % (draft, version))
         revision = None
         if draft in db:
-            debug("Already uploaded %s->%s"%(db[draft]["version"], db[draft]["revision_id"]))
+            debug(
+                "Already uploaded %s->%s"
+                % (db[draft]["version"], db[draft]["revision_id"])
+            )
             revision = db[draft]["revision_id"]
             if not is_newer_version(version, db[draft]["version"]):
                 continue
         # Either this is new or it's updated, so upload
         try:
-            debug("Trying to upload %s"%revision)
+            debug("Trying to upload %s" % revision)
             revision = upload_revision(draft, version, revision)
-            debug("Uploaded as revision=%s"%revision)
-            NEW.append("%s-%s: %s"%(draft, version, revision))
-            db[draft] = { "version" : version, "revision_id" : revision}
+            debug("Uploaded as revision=%s" % revision)
+            NEW.append("%s-%s: %s" % (draft, version, revision))
+            db[draft] = {"version": version, "revision_id": revision}
         except Exception as e:
-            print("Error: %s"%e)
+            print("Error: %s" % e)
         save_db(DBNAME, db)
 
     print("New drafts")
@@ -494,20 +543,27 @@ def read_config_file(config):
     rcf = open(config, "r")
     RC = json.load(rcf)
 
+
 def ensure_config(k):
     if not k in RC:
-        die("Value %s not configured"%k)
+        die("Value %s not configured" % k)
     return RC[k]
 
 
-parser = argparse.ArgumentParser(description='Git for review')
-parser.add_argument('--verbose', dest='verbose', action='store_true')
-parser.add_argument('--config', dest='config', default=".iphab.json")
-                    
+parser = argparse.ArgumentParser(description="Git for review")
+parser.add_argument("--verbose", dest="verbose", action="store_true")
+parser.add_argument("--config", dest="config", default=".iphab.json")
+
 subparsers = parser.add_subparsers(help="operation", dest="operation")
-subparser_update_drafts = subparsers.add_parser("update-drafts", help="Update the drafts")
-subparser_update_agenda = subparsers.add_parser("update-agenda", help="Update the agenda")
-subparser_update_agenda.add_argument("--no-update", dest="no_update", action='store_true', help="Don't update the drafts")
+subparser_update_drafts = subparsers.add_parser(
+    "update-drafts", help="Update the drafts"
+)
+subparser_update_agenda = subparsers.add_parser(
+    "update-agenda", help="Update the agenda"
+)
+subparser_update_agenda.add_argument(
+    "--no-update", dest="no_update", action="store_true", help="Don't update the drafts"
+)
 subparser_add_reviewer = subparsers.add_parser("add-reviewer", help="Add a reviewer")
 subparser_ballot = subparsers.add_parser("ballot", help="Generate a ballot")
 subparser_ballot.add_argument("draft", nargs=1, help="draft-name")
@@ -522,7 +578,7 @@ args = parser.parse_args()
 
 read_config_file(args.config)
 
-if args.operation ==  "update-drafts":
+if args.operation == "update-drafts":
     update_drafts()
 elif args.operation == "update-agenda":
     ensure_config("reviewer")
@@ -542,6 +598,3 @@ elif args.operation == "find-revision":
 elif args.operation == "clear-requests":
     ensure_config("reviewer")
     clear_requests(RC["reviewer"])
-
-    
-
