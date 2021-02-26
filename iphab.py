@@ -48,9 +48,9 @@ def die(msg):
 def read_db(dbname):
     try:
         fp = open(dbname)
+        json.load(fp)
     except Exception:
         return {}
-    return json.load(fp)
 
 
 def save_db(dbname, data):
