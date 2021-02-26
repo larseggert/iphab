@@ -1,4 +1,5 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
+
 import argparse
 import json
 import os
@@ -6,8 +7,9 @@ import re
 import subprocess
 import sys
 import textwrap
-import urllib
-import urllib2
+import urllib.request
+import urllib.error
+import urllib.parse
 
 DRAFT_PATTERN="(draft-[a-zA-Z0-9-\._\+]+)-([0-9][0-9])$"
 DRAFT_PATTERN_TXT="(draft-[a-zA-Z0-9-\._\+]+)-([0-9][0-9])\.txt$"
@@ -22,13 +24,13 @@ RC = None
 def debug(msg):
     global args
     if args.verbose:
-        print msg
+        print(msg)
 
 def warn(msg):
-    print "Warning: %s"%msg
+    print("Warning: %s"%msg)
     
 def die(msg):
-    print msg
+    print(msg)
     sys.exit(1)
 
 
@@ -48,7 +50,7 @@ def read_db(dbname):
     return json.load(fp)
 
 def save_db(dbname, data):
-    fp = open(dbname, "w")
+    fp = open(dbname, "wb")
     json.dump(data, fp, indent=1)
 
 
@@ -114,7 +116,7 @@ def run_git(command, ignore_errors = False):
 
 def strip_file(infile, outfile):
     stripped = subprocess.check_output(["awk", "-f", sys.path[0] + "/strip.awk", infile])
-    o = open(outfile, "w")
+    o = open(outfile, "wb")
     o.write(stripped)
     o.close()
 
@@ -160,7 +162,7 @@ def run_call_conduit(command, js):
     (out, err) = p.communicate(json.dumps(js))
     os.chdir(cwd)
     if err != "":
-        print err
+        print(err)
         raise RuntimeError("Error doing call-conduit: %s"%err)
     debug(out)
     jj = json.loads(out)
@@ -192,14 +194,14 @@ def add_reviewer(reviewer, revision, blocking):
 
 # Assign reviewers based on the IESG Agenda
 def download_agenda():
-    u = urllib2.urlopen("https://datatracker.ietf.org/iesg/agenda/agenda.json")
+    u = urllib.request.urlopen("https://datatracker.ietf.org/iesg/agenda/agenda.json")
     js = u.read()
     return json.loads(js)
 
 def assign_reviewers_from_agenda(agenda, reviewers):
     debug("Agenda: %s"%agenda)
     db = read_db(DBNAME)
-    for sn, sec in agenda["sections"].iteritems():
+    for sn, sec in agenda["sections"].items():
         if "docs" in sec:
             for doc in sec["docs"]:
                 docname = doc["docname"]
@@ -387,12 +389,12 @@ def post_ballot(apikey, draft, position, discuss, comment):
 
     u = DATATRACKER + api
     debug("URL = %s"%u)
-    sub = urllib.urlencode(submit)
+    sub = urllib.parse.urlencode(submit)
     debug("SUB = %s"%sub)
-    req = urllib2.Request(u, sub)
+    req = urllib.request.Request(u, sub)
     url = None
     try:
-        url = urllib2.urlopen(req)
+        url = urllib.request.urlopen(req)
     except Exception as e:
         die("Error posting ballot. %s --> %s"%(str(e), e.read()))
     resp = url.read()
@@ -413,7 +415,7 @@ def download_review(docname, out):
     if out is None:
         of = sys.stdout
     else:
-        of = open("%s/%s-rev.txt"%(out,docname), "w")
+        of = open("%s/%s-rev.txt"%(out,docname), "wb")
     of.write("\n".join(output))
     of.write("\n")
 
@@ -421,7 +423,7 @@ def find_revision(docname):
     db = read_db(DBNAME)
     if not docname in db:
         die("No Differential revision found for %s"%docname)
-    print db[docname]
+    print(db[docname])
 
 
 def clear_requests(reviewer):
@@ -459,7 +461,7 @@ def update_drafts():
     try:
         update_drafts_inner(man, db)
     except:
-        print "Error doing update"
+        print("Error doing update")
 
 def update_drafts_inner(man, db):    
     for draft in man:
@@ -479,12 +481,12 @@ def update_drafts_inner(man, db):
             NEW.append("%s-%s: %s"%(draft, version, revision))
             db[draft] = { "version" : version, "revision_id" : revision}
         except Exception as e:
-            print "Error: %s"%e
+            print("Error: %s"%e)
         save_db(DBNAME, db)
 
-    print "New drafts"
+    print("New drafts")
     for n in NEW:
-        print "   ", n
+        print("   ", n)
 
 
 def read_config_file(config):
