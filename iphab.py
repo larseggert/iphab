@@ -23,7 +23,8 @@ RC = []
 
 
 def debug(msg):
-    if ARGS.verbose:
+    global args
+    if args.verbose:
         print(msg)
 
 
@@ -588,27 +589,27 @@ subparser_find = subparsers.add_parser("find-revision", help="Find a revision")
 subparser_find.add_argument("draft", nargs=1, help="draft-name")
 subparser_clear = subparsers.add_parser("clear-requests")
 
-ARGS = parser.parse_args()
+args = parser.parse_args()
 
-read_config_file(ARGS.config)
+read_config_file(args.config)
 
-if ARGS.operation == "update-drafts":
+if args.operation == "update-drafts":
     update_drafts()
-elif ARGS.operation == "update-agenda":
+elif args.operation == "update-agenda":
     ensure_config("reviewer")
-    if not ARGS.no_update:
+    if not args.no_update:
         update_drafts()
     update_agenda(RC["reviewer"])
-elif ARGS.operation == "ballot":
-    ballot_draft(ARGS.draft[0])
-elif ARGS.operation == "download-review":
+elif args.operation == "ballot":
+    ballot_draft(args.draft[0])
+elif args.operation == "download-review":
     ensure_config("reviewer")
     to = None
-    if ARGS.stdout is False:
+    if args.stdout is False:
         to = ensure_config("review-dir")
-    download_review(ARGS.draft[0], to)
-elif ARGS.operation == "find-revision":
-    find_revision(ARGS.draft[0])
-elif ARGS.operation == "clear-requests":
+    download_review(args.draft[0], to)
+elif args.operation == "find-revision":
+    find_revision(args.draft[0])
+elif args.operation == "clear-requests":
     ensure_config("reviewer")
     clear_requests(RC["reviewer"])
