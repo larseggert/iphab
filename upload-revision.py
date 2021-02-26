@@ -1,4 +1,5 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
+
 import sys
 import subprocess
 import argparse
@@ -6,7 +7,9 @@ import re
 import os
 import shutil
 import datetime
-import urllib2
+import urllib.request
+import urllib.error
+import urllib.parse
 
 DRAFT_PATTERN="(draft-[a-zA-Z0-9-]+-[0-9][0-9])(\.txt)?"
 FILENAME_PATTERN="(draft-[a-zA-Z0-9-]+)\.txt$"
@@ -15,10 +18,10 @@ DOWNLOAD_TEMPLATE="https://www.ietf.org/id/%s.txt"
 def debug(msg):
     global args
     if args.verbose:
-        print msg
+        print(msg)
 
 def die(msg):
-    print msg
+    print(msg)
     sys.exit(1)
     
 def checkout_branch(bname):
@@ -31,7 +34,7 @@ def checkout_branch(bname):
 
 def strip_file(infile, outfile):
     stripped = subprocess.check_output(["awk", "-f", sys.path[0] + "/strip.awk", infile])
-    o = open(outfile, "w")
+    o = open(outfile, "wb")
     o.write(stripped)
     o.close()
     
@@ -80,8 +83,8 @@ def download_draft(draft):
     debug("Downloading draft %s"%draft)
     to_fetch = DOWNLOAD_TEMPLATE%draft
     to_save = "%s.txt"%draft
-    u = urllib2.urlopen(to_fetch)
-    f = open(to_save, "w")
+    u = urllib.request.urlopen(to_fetch)
+    f = open(to_save, "wb")
     f.write(u.read())
     f.close()
     return to_save
