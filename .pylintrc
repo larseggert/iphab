@@ -1,0 +1,9 @@
+[MESSAGES CONTROL]
+
+disable=
+	broad-except,
+	global-statement,
+	invalid-name,
+	missing-function-docstring,
+	missing-module-docstring,
+	too-many-branches
