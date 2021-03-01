@@ -19,7 +19,7 @@ GIT_REPO = "ietf-review"
 GIT_UPLOAD_BRANCH = "upload"
 NEW = []
 DATATRACKER = "https://datatracker.ietf.org"
-RC = []
+RC = {}
 
 
 def debug(msg):
@@ -179,7 +179,7 @@ def run_call_conduit(command, js):
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        encoding='utf8'
+        encoding="utf8",
     )
     (out, err) = p.communicate(val)
     os.chdir(cwd)
@@ -361,10 +361,9 @@ def retrieve_comments(docname, reviewer):
     important = []
     comments = []
     overall = (
-        "Rich version of this review at:\n"
-        "https://mozphab-ietf.devsvcdev.mozaws.net/"
+        "Rich version of this review at "
+        + RC["phabricator.uri"]
         + db[docname]["revision_id"]
-        + "\n"
     )
     status = None
 
@@ -407,9 +406,9 @@ def ballot_draft(docname):
         debug("Accepted, balloting no-objection")
         output.append(overall)
         if len(important) > 0:
-            output.append("IMPORTANT\n" + format_comments(important))
+            output.append("\nIMPORTANT\n" + format_comments(important))
         if len(comments) > 0:
-            output.append("COMMENTS\n" + format_comments(comments))
+            output.append("\nCOMMENTS\n" + format_comments(comments))
         post_ballot(RC["apikey"], docname, "noobj", None, "\n\n".join(output))
     elif status == "needs-revision":
         debug("needs-revision balloting DISCUSS")
@@ -463,9 +462,9 @@ def download_review(docname, out):
 
     output.append(overall)
     if len(important) > 0:
-        output.append("IMPORTANT\n" + format_comments(important))
+        output.append("\nIMPORTANT\n" + format_comments(important))
     if len(comments) > 0:
-        output.append("COMMENTS\n" + format_comments(comments))
+        output.append("\nCOMMENTS\n" + format_comments(comments))
 
     if out is None:
         of = sys.stdout
@@ -550,7 +549,7 @@ def update_drafts_inner(man, db):
 def read_config_file(config):
     global RC
     rcf = open(config, "r")
-    RC = json.load(rcf)
+    RC = RC | json.load(rcf)  # this only works if keys are unique
 
 
 def ensure_config(k):
@@ -593,6 +592,7 @@ subparser_clear = subparsers.add_parser("clear-requests")
 args = parser.parse_args()
 
 read_config_file(args.config)
+read_config_file(GIT_REPO + "/.arcconfig")
 
 if args.operation == "update-drafts":
     update_drafts()
