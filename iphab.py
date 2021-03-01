@@ -175,12 +175,13 @@ def run_call_conduit(command, js):
     debug("Running: %s" % val)
     os.chdir(GIT_REPO)
     p = subprocess.Popen(
-        ["arc", "call-conduit", command],
+        ["arc", "call-conduit", command, "--"],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
+        encoding='utf8'
     )
-    (out, err) = p.communicate(json.dumps(js))
+    (out, err) = p.communicate(val)
     os.chdir(cwd)
     if err != "":
         print(err)
@@ -226,7 +227,7 @@ def download_agenda():
 
 
 def assign_reviewers_from_agenda(agenda, reviewers):
-    debug("Agenda: %s" % agenda)
+    debug("Agenda: %s" % json.dumps(agenda, indent=4))
     db = read_db(DBNAME)
     for _, sec in agenda["sections"].items():
         if "docs" in sec:
