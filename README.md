@@ -1,4 +1,4 @@
-# `iphab` -- tools to integrate Phabricator into the IETF workflow
+# `iphab` -- Integrate Phabricator into the IETF workflow
 
 IETF involves a lot of document review, and this is doubly true for being an
 Area Director. `iphab` merges the IETF workflow with the popular
