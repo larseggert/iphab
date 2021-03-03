@@ -27,6 +27,8 @@ Differences to [Ekr's original version](https://github.com/ekr/iphab):
 
 - use Phabricator URL from the Arcanist config file in the generated reviews
 
+- removed apparently obsolete file
+
 ## Setup
 
 1. Install the Phabricator [Arcanist
